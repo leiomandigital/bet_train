@@ -6,10 +6,12 @@ export function CartaoTreino({
   treino,
   aoEditar,
   aoExcluir,
+  aoRepetir,
 }: {
   treino: Treino;
   aoEditar: () => void;
   aoExcluir: () => void;
+  aoRepetir: () => void;
 }) {
   return (
     <Cartao className="flex flex-col gap-3">
@@ -23,6 +25,9 @@ export function CartaoTreino({
           )}
         </div>
         <div className="flex gap-3 text-xs">
+          <button onClick={aoRepetir} className="text-blue-400 hover:text-blue-300">
+            Repetir
+          </button>
           <button onClick={aoEditar} className="text-emerald-400 hover:text-emerald-300">
             Editar
           </button>

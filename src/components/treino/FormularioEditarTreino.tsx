@@ -49,6 +49,10 @@ export function FormularioEditarTreino({
     setItens((atual) => atual.filter((_, i) => i !== indice));
   }
 
+  function editarItem(indice: number, itemAtualizado: ItemTreinoRascunho) {
+    setItens((atual) => atual.map((item, i) => (i === indice ? itemAtualizado : item)));
+  }
+
   async function lidarComSalvar() {
     setSalvando(true);
     const ok = await aoSalvar({
@@ -86,7 +90,7 @@ export function FormularioEditarTreino({
 
       <FormularioAdicionarExercicio aoAdicionar={adicionarItem} />
 
-      <ListaRascunhoExercicios itens={itens} aoRemover={removerItem} />
+      <ListaRascunhoExercicios itens={itens} aoRemover={removerItem} aoEditar={editarItem} />
 
       <MensagemErro mensagem={erro} />
 

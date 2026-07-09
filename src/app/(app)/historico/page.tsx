@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTreinos } from "@/hooks/useTreinos";
 import { useMedidasCorporais } from "@/hooks/useMedidasCorporais";
 import { Carregando } from "@/components/ui/Carregando";
@@ -14,6 +15,7 @@ import { FormularioMedida } from "@/components/medidas/FormularioMedida";
 type Aba = "treinos" | "medidas";
 
 export default function PaginaHistorico() {
+  const router = useRouter();
   const { treinos, carregando: carregandoTreinos, erro: erroTreinos, editarTreino, removerTreino } =
     useTreinos();
   const {
@@ -76,6 +78,7 @@ export default function PaginaHistorico() {
                   treino={treino}
                   aoEditar={() => setTreinoEditandoId(treino.id)}
                   aoExcluir={() => setTreinoExcluindoId(treino.id)}
+                  aoRepetir={() => router.push(`/treino?repetir=${treino.id}`)}
                 />
               )
             )
