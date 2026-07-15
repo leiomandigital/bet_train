@@ -163,11 +163,27 @@ export async function atribuirTemplate(
   if (userIds.length === 0) return;
 
   const supabase = criarSupabaseClient();
+
+  // Cada usuário entra no fim da própria sequência de treinos (ciclo).
+  const proximasOrdens = await Promise.all(
+    userIds.map(async (userId) => {
+      const { data } = await supabase
+        .from("treino_atribuicoes")
+        .select("ordem")
+        .eq("user_id", userId)
+        .order("ordem", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return (data?.ordem ?? -1) + 1;
+    })
+  );
+
   const { error } = await supabase.from("treino_atribuicoes").insert(
-    userIds.map((userId) => ({
+    userIds.map((userId, indice) => ({
       template_id: templateId,
       user_id: userId,
       atribuido_por: adminId,
+      ordem: proximasOrdens[indice],
     }))
   );
 

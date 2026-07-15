@@ -11,7 +11,8 @@ import { MensagemErro } from "@/components/ui/MensagemErro";
 import { Carregando } from "@/components/ui/Carregando";
 import { FormularioAdicionarExercicioTemplate } from "@/components/treino/FormularioAdicionarExercicioTemplate";
 import { ListaRascunhoExerciciosTemplate } from "@/components/treino/ListaRascunhoExerciciosTemplate";
-import type { ItemTemplateRascunho } from "@/types/treinoTemplate.types";
+import { OrdenarAtribuicoesUsuario } from "@/components/treino/OrdenarAtribuicoesUsuario";
+import type { ItemTemplateRascunho, TreinoTemplate } from "@/types/treinoTemplate.types";
 
 export default function PaginaAdminTreinos() {
   const { perfil, carregando: carregandoPerfil } = usePerfil();
@@ -43,6 +44,22 @@ function ConteudoAdminTreinos() {
 
   function removerItem(indice: number) {
     setItens((atual) => atual.filter((_, i) => i !== indice));
+  }
+
+  function duplicarTemplate(template: TreinoTemplate) {
+    setNome(`${template.nome} (cópia)`);
+    setItens(
+      template.exercicios.map((item) => ({
+        exercicioId: item.exercicioId,
+        exercicioNome: item.exercicioNome,
+        categoriaNome: item.categoriaNome,
+        series: item.series,
+        repeticoes: item.repeticoes,
+        intervaloSegundos: item.intervaloSegundos,
+      }))
+    );
+    setSucesso(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function lidarComCriar() {
@@ -101,35 +118,36 @@ function ConteudoAdminTreinos() {
           templates.map((template) => (
             <CartaoTemplate
               key={template.id}
-              templateId={template.id}
-              nome={template.nome}
-              quantidadeExercicios={template.exercicios.length}
+              template={template}
               usuarios={usuarios}
               aoAtribuir={atribuir}
               aoExcluir={remover}
+              aoDuplicar={duplicarTemplate}
             />
           ))
         )}
       </div>
+
+      {usuarios.length > 0 && <OrdenarAtribuicoesUsuario usuarios={usuarios} />}
     </div>
   );
 }
 
 function CartaoTemplate({
-  templateId,
-  nome,
-  quantidadeExercicios,
+  template,
   usuarios,
   aoAtribuir,
   aoExcluir,
+  aoDuplicar,
 }: {
-  templateId: string;
-  nome: string;
-  quantidadeExercicios: number;
+  template: TreinoTemplate;
   usuarios: { id: string; nome: string | null }[];
   aoAtribuir: (templateId: string, userIds: string[]) => Promise<boolean>;
   aoExcluir: (templateId: string) => Promise<boolean>;
+  aoDuplicar: (template: TreinoTemplate) => void;
 }) {
+  const { id: templateId, nome, exercicios } = template;
+  const quantidadeExercicios = exercicios.length;
   const [userIdsSelecionados, setUserIdsSelecionados] = useState<string[]>([]);
   const [atribuindo, setAtribuindo] = useState(false);
   const [sucessoAtribuicao, setSucessoAtribuicao] = useState(false);
@@ -158,12 +176,20 @@ function CartaoTemplate({
           <p className="text-sm font-medium text-zinc-100">{nome}</p>
           <p className="text-xs text-zinc-500">{quantidadeExercicios} exercício(s)</p>
         </div>
-        <button
-          onClick={() => aoExcluir(templateId)}
-          className="text-xs text-red-400 hover:text-red-300"
-        >
-          Excluir
-        </button>
+        <div className="flex gap-3 text-xs">
+          <button
+            onClick={() => aoDuplicar(template)}
+            className="text-blue-400 hover:text-blue-300"
+          >
+            Duplicar
+          </button>
+          <button
+            onClick={() => aoExcluir(templateId)}
+            className="text-red-400 hover:text-red-300"
+          >
+            Excluir
+          </button>
+        </div>
       </div>
 
       {usuarios.length > 0 && (

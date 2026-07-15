@@ -7,6 +7,7 @@ export interface TreinoAtribuicao {
   userId: string;
   atribuidoPor: string;
   status: StatusAtribuicao;
+  ordem: number;
   iniciadoEm: string | null;
   concluidoEm: string | null;
   duracaoTotalSegundos: number | null;

@@ -22,7 +22,7 @@ export function PainelTreinoAtual() {
   const [iniciando, setIniciando] = useState<string | null>(null);
 
   const atribuicoesOrdenadas = useMemo(
-    () => [...atribuicoes].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    () => [...atribuicoes].sort((a, b) => a.ordem - b.ordem),
     [atribuicoes]
   );
 

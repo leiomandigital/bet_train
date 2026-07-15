@@ -65,7 +65,7 @@ export function useMinhasAtribuicoes() {
     () =>
       atribuicoes
         .filter((atribuicao) => atribuicao.status === "pendente")
-        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+        .sort((a, b) => a.ordem - b.ordem),
     [atribuicoes]
   );
 

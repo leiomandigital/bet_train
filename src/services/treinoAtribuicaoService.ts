@@ -13,6 +13,7 @@ interface AtribuicaoRow {
   user_id: string;
   atribuido_por: string;
   status: StatusAtribuicao;
+  ordem: number;
   iniciado_em: string | null;
   concluido_em: string | null;
   duracao_total_segundos: number | null;
@@ -28,6 +29,7 @@ function converterParaAtribuicao(linha: AtribuicaoRow): TreinoAtribuicao {
     userId: linha.user_id,
     atribuidoPor: linha.atribuido_por,
     status: linha.status,
+    ordem: linha.ordem,
     iniciadoEm: linha.iniciado_em,
     concluidoEm: linha.concluido_em,
     duracaoTotalSegundos: linha.duracao_total_segundos,
@@ -41,13 +43,48 @@ export async function listarMinhasAtribuicoes(userId: string): Promise<TreinoAtr
     .from("treino_atribuicoes")
     .select("*, treino_templates ( nome )")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+    .order("ordem", { ascending: true });
 
   if (error) {
     throw new Error(`Falha ao listar treinos atribuídos: ${error.message}`);
   }
 
   return ((data ?? []) as unknown as AtribuicaoRow[]).map(converterParaAtribuicao);
+}
+
+export async function listarAtribuicoesPorUsuario(userId: string): Promise<TreinoAtribuicao[]> {
+  const supabase = criarSupabaseClient();
+  const { data, error } = await supabase
+    .from("treino_atribuicoes")
+    .select("*, treino_templates ( nome )")
+    .eq("user_id", userId)
+    .order("ordem", { ascending: true });
+
+  if (error) {
+    throw new Error(`Falha ao listar treinos do usuário: ${error.message}`);
+  }
+
+  return ((data ?? []) as unknown as AtribuicaoRow[]).map(converterParaAtribuicao);
+}
+
+export async function trocarOrdemAtribuicoes(
+  atribuicaoIdA: string,
+  ordemA: number,
+  atribuicaoIdB: string,
+  ordemB: number
+): Promise<void> {
+  const supabase = criarSupabaseClient();
+
+  const [respostaA, respostaB] = await Promise.all([
+    supabase.from("treino_atribuicoes").update({ ordem: ordemB }).eq("id", atribuicaoIdA),
+    supabase.from("treino_atribuicoes").update({ ordem: ordemA }).eq("id", atribuicaoIdB),
+  ]);
+
+  if (respostaA.error || respostaB.error) {
+    throw new Error(
+      `Falha ao reordenar treinos: ${respostaA.error?.message ?? respostaB.error?.message}`
+    );
+  }
 }
 
 interface SerieRow {
