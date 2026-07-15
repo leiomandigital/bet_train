@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useTreinos } from "./useTreinos";
 import { useMedidasCorporais } from "./useMedidasCorporais";
+import { useExecucoesConcluidas } from "./useExecucoesConcluidas";
 import { diasDesde } from "@/utils/formatters";
 
 export interface PontoEvolucaoPeso {
@@ -17,29 +18,32 @@ export interface PontoEvolucaoMedidas {
   bicepsDireito: number | null;
 }
 
-export interface PontoFrequenciaTreino {
-  semana: string;
-  quantidade: number;
-}
-
 export interface PontoDistribuicaoCategoria {
   categoria: string;
   quantidade: number;
 }
 
-function inicioDaSemana(dataIso: string): string {
-  const data = new Date(`${dataIso}T00:00:00`);
-  const diaSemana = data.getDay();
-  data.setDate(data.getDate() - diaSemana);
-  return data.toISOString().slice(0, 10);
+export interface ExercicioComHistorico {
+  id: string;
+  nome: string;
+}
+
+export interface PontoEvolucaoPesoExercicio {
+  data: string;
+  pesoKg: number;
 }
 
 export function useDashboard() {
   const { treinos, carregando: carregandoTreinos, erro: erroTreinos } = useTreinos();
   const { medidas, carregando: carregandoMedidas, erro: erroMedidas } = useMedidasCorporais();
+  const {
+    execucoes,
+    carregando: carregandoExecucoes,
+    erro: erroExecucoes,
+  } = useExecucoesConcluidas();
 
-  const carregando = carregandoTreinos || carregandoMedidas;
-  const erro = erroTreinos ?? erroMedidas;
+  const carregando = carregandoTreinos || carregandoMedidas || carregandoExecucoes;
+  const erro = erroTreinos ?? erroMedidas ?? erroExecucoes;
 
   const totalTreinosNoMes = useMemo(() => {
     const hoje = new Date();
@@ -83,16 +87,40 @@ export function useDashboard() {
     [medidas]
   );
 
-  const frequenciaSemanal: PontoFrequenciaTreino[] = useMemo(() => {
-    const contagemPorSemana = new Map<string, number>();
-    treinos.forEach((treino) => {
-      const semana = inicioDaSemana(treino.data);
-      contagemPorSemana.set(semana, (contagemPorSemana.get(semana) ?? 0) + 1);
+  const exerciciosComHistorico: ExercicioComHistorico[] = useMemo(() => {
+    const exerciciosPorId = new Map<string, string>();
+    execucoes.forEach((execucao) => {
+      execucao.exercicios.forEach((item) => {
+        exerciciosPorId.set(item.exercicioId, item.exercicioNome);
+      });
     });
-    return Array.from(contagemPorSemana.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([semana, quantidade]) => ({ semana, quantidade }));
-  }, [treinos]);
+    return Array.from(exerciciosPorId.entries())
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [execucoes]);
+
+  const evolucaoPesoPorExercicio: Map<string, PontoEvolucaoPesoExercicio[]> = useMemo(() => {
+    const mapa = new Map<string, PontoEvolucaoPesoExercicio[]>();
+
+    [...execucoes]
+      .sort((a, b) => (a.concluidoEm ?? "").localeCompare(b.concluidoEm ?? ""))
+      .forEach((execucao) => {
+        if (!execucao.concluidoEm) return;
+        execucao.exercicios.forEach((item) => {
+          const pesosDaSessao = item.series
+            .map((serie) => serie.pesoKg)
+            .filter((peso): peso is number => peso !== null);
+          if (pesosDaSessao.length === 0) return;
+
+          const pesoMaximo = Math.max(...pesosDaSessao);
+          const pontos = mapa.get(item.exercicioId) ?? [];
+          pontos.push({ data: execucao.concluidoEm!.slice(0, 10), pesoKg: pesoMaximo });
+          mapa.set(item.exercicioId, pontos);
+        });
+      });
+
+    return mapa;
+  }, [execucoes]);
 
   const distribuicaoPorCategoria: PontoDistribuicaoCategoria[] = useMemo(() => {
     const contagemPorCategoria = new Map<string, number>();
@@ -119,7 +147,8 @@ export function useDashboard() {
     totalExerciciosRealizados,
     evolucaoPeso,
     evolucaoMedidas,
-    frequenciaSemanal,
+    exerciciosComHistorico,
+    evolucaoPesoPorExercicio,
     distribuicaoPorCategoria,
   };
 }

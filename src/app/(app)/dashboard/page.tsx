@@ -7,7 +7,7 @@ import { Cartao } from "@/components/ui/Cartao";
 import { CartaoMetrica } from "@/components/dashboard/CartaoMetrica";
 import { GraficoEvolucaoPeso } from "@/components/dashboard/GraficoEvolucaoPeso";
 import { GraficoEvolucaoMedidas } from "@/components/dashboard/GraficoEvolucaoMedidas";
-import { GraficoFrequenciaTreinos } from "@/components/dashboard/GraficoFrequenciaTreinos";
+import { GraficoEvolucaoPesoExercicio } from "@/components/dashboard/GraficoEvolucaoPesoExercicio";
 import { GraficoDistribuicaoCategorias } from "@/components/dashboard/GraficoDistribuicaoCategorias";
 import { formatarPeso } from "@/utils/formatters";
 
@@ -22,7 +22,8 @@ export default function PaginaDashboard() {
     totalExerciciosRealizados,
     evolucaoPeso,
     evolucaoMedidas,
-    frequenciaSemanal,
+    exerciciosComHistorico,
+    evolucaoPesoPorExercicio,
     distribuicaoPorCategoria,
   } = useDashboard();
 
@@ -34,8 +35,9 @@ export default function PaginaDashboard() {
       <MensagemErro mensagem={erro} />
 
       <div className="grid grid-cols-2 gap-3">
-        <CartaoMetrica rotulo="Treinos no mês" valor={String(totalTreinosNoMes)} />
+        <CartaoMetrica icone="🏋️" rotulo="Treinos no mês" valor={String(totalTreinosNoMes)} />
         <CartaoMetrica
+          icone="⚖️"
           rotulo="Peso atual vs. inicial"
           valor={
             pesoAtual !== null && pesoInicial !== null
@@ -44,25 +46,33 @@ export default function PaginaDashboard() {
           }
         />
         <CartaoMetrica
+          icone="📅"
           rotulo="Dias desde o último treino"
           valor={diasDesdeUltimoTreino !== null ? String(diasDesdeUltimoTreino) : "-"}
         />
-        <CartaoMetrica rotulo="Exercícios realizados" valor={String(totalExerciciosRealizados)} />
+        <CartaoMetrica
+          icone="✅"
+          rotulo="Exercícios realizados"
+          valor={String(totalExerciciosRealizados)}
+        />
       </div>
 
       <Cartao>
-        <h2 className="mb-2 text-sm font-semibold text-zinc-200">Evolução do peso</h2>
+        <h2 className="mb-2 text-sm font-semibold text-zinc-200">Evolução de peso por exercício</h2>
+        <GraficoEvolucaoPesoExercicio
+          exercicios={exerciciosComHistorico}
+          evolucaoPorExercicio={evolucaoPesoPorExercicio}
+        />
+      </Cartao>
+
+      <Cartao>
+        <h2 className="mb-2 text-sm font-semibold text-zinc-200">Evolução do peso corporal</h2>
         <GraficoEvolucaoPeso dados={evolucaoPeso} />
       </Cartao>
 
       <Cartao>
         <h2 className="mb-2 text-sm font-semibold text-zinc-200">Evolução das medidas corporais</h2>
         <GraficoEvolucaoMedidas dados={evolucaoMedidas} />
-      </Cartao>
-
-      <Cartao>
-        <h2 className="mb-2 text-sm font-semibold text-zinc-200">Frequência de treinos por semana</h2>
-        <GraficoFrequenciaTreinos dados={frequenciaSemanal} />
       </Cartao>
 
       <Cartao>
