@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTreinos } from "@/hooks/useTreinos";
+import { useExecucoesConcluidas } from "@/hooks/useExecucoesConcluidas";
 import { useMedidasCorporais } from "@/hooks/useMedidasCorporais";
 import { Carregando } from "@/components/ui/Carregando";
 import { MensagemErro } from "@/components/ui/MensagemErro";
 import { DialogoConfirmacao } from "@/components/ui/DialogoConfirmacao";
 import { CartaoTreino } from "@/components/treino/CartaoTreino";
+import { CartaoExecucaoConcluida } from "@/components/treino/CartaoExecucaoConcluida";
 import { FormularioEditarTreino } from "@/components/treino/FormularioEditarTreino";
 import { CartaoMedida } from "@/components/medidas/CartaoMedida";
 import { FormularioMedida } from "@/components/medidas/FormularioMedida";
@@ -18,6 +20,11 @@ export default function PaginaHistorico() {
   const router = useRouter();
   const { treinos, carregando: carregandoTreinos, erro: erroTreinos, editarTreino, removerTreino } =
     useTreinos();
+  const {
+    execucoes,
+    carregando: carregandoExecucoes,
+    erro: erroExecucoes,
+  } = useExecucoesConcluidas();
   const {
     medidas,
     carregando: carregandoMedidas,
@@ -57,10 +64,19 @@ export default function PaginaHistorico() {
 
       {aba === "treinos" && (
         <div className="flex flex-col gap-3">
-          <MensagemErro mensagem={erroTreinos} />
+          <MensagemErro mensagem={erroTreinos ?? erroExecucoes} />
+
+          {carregandoExecucoes ? (
+            <Carregando />
+          ) : (
+            execucoes.map((execucao) => (
+              <CartaoExecucaoConcluida key={execucao.id} execucao={execucao} />
+            ))
+          )}
+
           {carregandoTreinos ? (
             <Carregando />
-          ) : treinos.length === 0 ? (
+          ) : treinos.length === 0 && execucoes.length === 0 ? (
             <p className="text-sm text-zinc-500">Nenhum treino lançado ainda.</p>
           ) : (
             treinos.map((treino) =>

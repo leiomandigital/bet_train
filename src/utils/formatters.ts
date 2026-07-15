@@ -30,6 +30,13 @@ export function formatarIntervalo(segundos: number): string {
   return resto === 0 ? `${minutos}min` : `${minutos}min ${resto}s`;
 }
 
+export function formatarMMSS(segundos: number): string {
+  const segundosPositivos = Math.max(0, segundos);
+  const minutos = Math.floor(segundosPositivos / 60);
+  const resto = Math.floor(segundosPositivos % 60);
+  return `${String(minutos).padStart(2, "0")}:${String(resto).padStart(2, "0")}`;
+}
+
 export function diasDesde(dataIso: string): number {
   const dataAlvo = new Date(`${dataIso}T00:00:00`);
   const hoje = new Date();

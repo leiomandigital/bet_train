@@ -1,5 +1,5 @@
 import { criarSupabaseClient } from "./supabaseClient";
-import type { AtualizarPerfilInput, Perfil } from "@/types/perfil.types";
+import type { AtualizarPerfilInput, PapelUsuario, Perfil } from "@/types/perfil.types";
 
 interface PerfilRow {
   id: string;
@@ -7,6 +7,7 @@ interface PerfilRow {
   telefone: string | null;
   data_nascimento: string | null;
   altura_cm: number | null;
+  role: PapelUsuario;
   created_at: string;
   updated_at: string;
 }
@@ -18,6 +19,7 @@ function converterParaPerfil(linha: PerfilRow): Perfil {
     telefone: linha.telefone,
     dataNascimento: linha.data_nascimento,
     alturaCm: linha.altura_cm,
+    role: linha.role,
     createdAt: linha.created_at,
     updatedAt: linha.updated_at,
   };

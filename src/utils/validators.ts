@@ -56,3 +56,28 @@ export function validarTreino(input: { data: string; itensCount: number }): stri
   if (input.itensCount === 0) return "Adicione ao menos um exercício ao treino.";
   return null;
 }
+
+export function validarItemTemplate(input: {
+  exercicioId: string;
+  series: number;
+  repeticoes: number;
+  intervaloSegundos: number;
+}): string | null {
+  if (!campoObrigatorioPreenchido(input.exercicioId)) return "Selecione um exercício.";
+  if (!campoObrigatorioPreenchido(input.series) || input.series <= 0) {
+    return "Informe o número de séries.";
+  }
+  if (!campoObrigatorioPreenchido(input.repeticoes) || input.repeticoes <= 0) {
+    return "Informe o número de repetições.";
+  }
+  if (!campoObrigatorioPreenchido(input.intervaloSegundos) || input.intervaloSegundos < 0) {
+    return "Informe o intervalo entre séries.";
+  }
+  return null;
+}
+
+export function validarTemplate(input: { nome: string; itensCount: number }): string | null {
+  if (!campoObrigatorioPreenchido(input.nome)) return "Informe o nome do treino.";
+  if (input.itensCount === 0) return "Adicione ao menos um exercício ao treino.";
+  return null;
+}

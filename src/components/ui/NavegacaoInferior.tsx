@@ -2,20 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const ITENS = [
-  { href: "/dashboard", rotulo: "Dashboard", icone: "📊" },
-  { href: "/treino", rotulo: "Treino", icone: "🏋️" },
-  { href: "/historico", rotulo: "Histórico", icone: "📜" },
-  { href: "/perfil", rotulo: "Perfil", icone: "👤" },
-];
+import { usePerfil } from "@/hooks/usePerfil";
 
 export function NavegacaoInferior() {
   const pathname = usePathname();
+  const { perfil } = usePerfil();
+
+  const hrefTreino = perfil?.role === "admin" ? "/admin/treinos" : "/treino";
+
+  const itens = [
+    { href: "/dashboard", rotulo: "Dashboard", icone: "📊" },
+    { href: hrefTreino, rotulo: "Treino", icone: "🏋️" },
+    { href: "/historico", rotulo: "Histórico", icone: "📜" },
+    { href: "/perfil", rotulo: "Perfil", icone: "👤" },
+  ];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-800 bg-zinc-950/95 backdrop-blur">
-      {ITENS.map((item) => {
+      {itens.map((item) => {
         const ativo = pathname.startsWith(item.href);
         return (
           <Link
