@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Cartao } from "@/components/ui/Cartao";
 import { formatarDataBr, formatarIntervalo } from "@/utils/formatters";
 import type { Treino } from "@/types/treino.types";
@@ -13,18 +16,26 @@ export function CartaoTreino({
   aoExcluir: () => void;
   aoRepetir: () => void;
 }) {
+  const [expandido, setExpandido] = useState(false);
+
   return (
     <Cartao className="flex flex-col gap-3">
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-semibold text-zinc-100">{formatarDataBr(treino.data)}</p>
+        <button
+          onClick={() => setExpandido((atual) => !atual)}
+          className="min-w-0 flex-1 text-left"
+        >
+          <p className="text-sm font-semibold text-zinc-100">
+            {expandido ? "▾ " : "▸ "}
+            {formatarDataBr(treino.data)}
+          </p>
           {treino.aquecimentoEquipamento && (
             <p className="text-xs text-zinc-500">
               Aquecimento: {treino.aquecimentoEquipamento} · {treino.aquecimentoMinutos}min
             </p>
           )}
-        </div>
-        <div className="flex gap-3 text-xs">
+        </button>
+        <div className="flex shrink-0 gap-3 text-xs">
           <button onClick={aoRepetir} className="text-blue-400 hover:text-blue-300">
             Repetir
           </button>
@@ -37,18 +48,20 @@ export function CartaoTreino({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {treino.exercicios.map((item) => (
-          <div key={item.id} className="rounded-lg bg-zinc-800/50 px-3 py-2 text-xs text-zinc-300">
-            <span className="font-medium text-zinc-100">{item.exercicioNome}</span>{" "}
-            <span className="text-zinc-500">({item.categoriaNome})</span>
-            <div className="text-zinc-400">
-              {item.series}x{item.repeticoes} · {item.pesoKg}kg ·{" "}
-              {formatarIntervalo(item.intervaloSegundos)}
+      {expandido && (
+        <div className="flex flex-col gap-2">
+          {treino.exercicios.map((item) => (
+            <div key={item.id} className="rounded-lg bg-zinc-800/50 px-3 py-2 text-xs text-zinc-300">
+              <span className="font-medium text-zinc-100">{item.exercicioNome}</span>{" "}
+              <span className="text-zinc-500">({item.categoriaNome})</span>
+              <div className="text-zinc-400">
+                {item.series}x{item.repeticoes} · {item.pesoKg}kg ·{" "}
+                {formatarIntervalo(item.intervaloSegundos)}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </Cartao>
   );
 }

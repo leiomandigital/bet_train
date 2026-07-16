@@ -15,12 +15,13 @@ export interface TreinoExecucaoExercicio {
   categoriaNome: string;
   intervaloSegundos: number;
   ordem: number;
+  encadeadoComProximo: boolean;
   series: TreinoSerie[];
 }
 
 export interface TreinoExecucao {
   id: string;
-  atribuicaoId: string;
+  atribuicaoId: string | null;
   templateId: string;
   templateNome: string;
   userId: string;

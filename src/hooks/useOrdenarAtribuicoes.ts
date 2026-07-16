@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   listarAtribuicoesPorUsuario,
+  removerAtribuicao,
   trocarOrdemAtribuicoes,
 } from "@/services/treinoAtribuicaoService";
 import type { TreinoAtribuicao } from "@/types/treinoAtribuicao.types";
@@ -53,5 +54,18 @@ export function useOrdenarAtribuicoes(userId: string | null) {
     [atribuicoes, carregar]
   );
 
-  return { atribuicoes, carregando, erro, mover };
+  const remover = useCallback(
+    async (atribuicaoId: string) => {
+      setErro(null);
+      try {
+        await removerAtribuicao(atribuicaoId);
+        await carregar();
+      } catch (excecao) {
+        setErro(excecao instanceof Error ? excecao.message : "Falha ao remover treino atribuído.");
+      }
+    },
+    [carregar]
+  );
+
+  return { atribuicoes, carregando, erro, mover, remover };
 }

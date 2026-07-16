@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMinhasAtribuicoes } from "@/hooks/useMinhasAtribuicoes";
 import { Cartao } from "@/components/ui/Cartao";
 import { MensagemErro } from "@/components/ui/MensagemErro";
@@ -40,7 +42,12 @@ export function PainelTreinoAtual() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-lg font-bold text-zinc-100">Treino</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-bold text-zinc-100">Treino</h1>
+        <Link href="/treino/lancar" className="text-xs text-emerald-400 hover:text-emerald-300">
+          Lançar treino do passado →
+        </Link>
+      </div>
 
       <MensagemErro mensagem={erro} />
 
@@ -74,11 +81,13 @@ function CartaoAtribuicao({
   iniciando: boolean;
   aoIniciar: () => void;
 }) {
+  const router = useRouter();
   const concluido = atribuicao.status === "concluido";
 
   return (
     <Cartao
-      className={`flex items-center justify-between gap-3 ${
+      onClick={() => router.push(`/treino/visualizar/${atribuicao.templateId}`)}
+      className={`flex cursor-pointer items-center justify-between gap-3 ${
         atual ? "border-emerald-800" : concluido ? "opacity-60" : ""
       }`}
     >
@@ -92,7 +101,10 @@ function CartaoAtribuicao({
       {atual && (
         <button
           disabled={iniciando}
-          onClick={aoIniciar}
+          onClick={(evento) => {
+            evento.stopPropagation();
+            aoIniciar();
+          }}
           className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {iniciando ? "Iniciando..." : "Iniciar"}

@@ -46,6 +46,14 @@ function ConteudoAdminTreinos() {
     setItens((atual) => atual.filter((_, i) => i !== indice));
   }
 
+  function alternarEncadeamento(indice: number) {
+    setItens((atual) =>
+      atual.map((item, i) =>
+        i === indice ? { ...item, encadeadoComProximo: !item.encadeadoComProximo } : item
+      )
+    );
+  }
+
   function duplicarTemplate(template: TreinoTemplate) {
     setNome(`${template.nome} (cópia)`);
     setItens(
@@ -56,6 +64,7 @@ function ConteudoAdminTreinos() {
         series: item.series,
         repeticoes: item.repeticoes,
         intervaloSegundos: item.intervaloSegundos,
+        encadeadoComProximo: item.encadeadoComProximo,
       }))
     );
     setSucesso(false);
@@ -94,7 +103,11 @@ function ConteudoAdminTreinos() {
 
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-semibold text-zinc-200">Exercícios do treino</h3>
-        <ListaRascunhoExerciciosTemplate itens={itens} aoRemover={removerItem} />
+        <ListaRascunhoExerciciosTemplate
+          itens={itens}
+          aoRemover={removerItem}
+          aoAlternarEncadeamento={alternarEncadeamento}
+        />
       </div>
 
       <MensagemErro mensagem={erro} />

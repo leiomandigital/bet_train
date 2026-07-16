@@ -83,6 +83,7 @@ export function FormularioAdicionarExercicioTemplate({
       series: Number(series),
       repeticoes: Number(repeticoes),
       intervaloSegundos: Number(intervaloSegundos),
+      encadeadoComProximo: false,
     });
 
     setExercicioId("");

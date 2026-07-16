@@ -67,6 +67,15 @@ export async function listarAtribuicoesPorUsuario(userId: string): Promise<Trein
   return ((data ?? []) as unknown as AtribuicaoRow[]).map(converterParaAtribuicao);
 }
 
+export async function removerAtribuicao(atribuicaoId: string): Promise<void> {
+  const supabase = criarSupabaseClient();
+  const { error } = await supabase.from("treino_atribuicoes").delete().eq("id", atribuicaoId);
+
+  if (error) {
+    throw new Error(`Falha ao remover treino atribuído: ${error.message}`);
+  }
+}
+
 export async function trocarOrdemAtribuicoes(
   atribuicaoIdA: string,
   ordemA: number,
@@ -102,6 +111,7 @@ interface ExecucaoExercicioRow {
   exercicio_id: string;
   intervalo_segundos: number;
   ordem: number;
+  encadeado_com_proximo: boolean;
   exercicios: {
     nome: string;
     categorias_exercicio: { nome: string } | null;
@@ -111,7 +121,7 @@ interface ExecucaoExercicioRow {
 
 interface ExecucaoRow {
   id: string;
-  atribuicao_id: string;
+  atribuicao_id: string | null;
   template_id: string;
   user_id: string;
   iniciado_em: string;
@@ -136,6 +146,7 @@ const SELECT_EXECUCAO_COMPLETA = `
     exercicio_id,
     intervalo_segundos,
     ordem,
+    encadeado_com_proximo,
     exercicios ( nome, categorias_exercicio ( nome ) ),
     treino_series ( id, execucao_exercicio_id, numero_serie, repeticoes, peso_kg, concluida )
   )
@@ -161,6 +172,7 @@ function converterParaExecucaoExercicio(linha: ExecucaoExercicioRow): TreinoExec
     categoriaNome: linha.exercicios?.categorias_exercicio?.nome ?? "-",
     intervaloSegundos: linha.intervalo_segundos,
     ordem: linha.ordem,
+    encadeadoComProximo: linha.encadeado_com_proximo,
     series: (linha.treino_series ?? [])
       .map(converterParaSerie)
       .sort((a, b) => a.numeroSerie - b.numeroSerie),
@@ -217,7 +229,7 @@ async function buscarUltimosPesosPorExercicio(
 }
 
 export interface ExecucaoEmAndamento {
-  atribuicaoId: string;
+  atribuicaoId: string | null;
   execucaoId: string;
 }
 
@@ -241,6 +253,35 @@ export async function buscarExecucaoEmAndamento(
   return data ? { atribuicaoId: data.atribuicao_id, execucaoId: data.id } : null;
 }
 
+export interface ItemTemplateParaCopia {
+  exercicio_id: string;
+  series: number;
+  repeticoes: number;
+  intervalo_segundos: number;
+  ordem: number;
+  encadeado_com_proximo: boolean;
+  exercicios: { nome: string; categorias_exercicio: { nome: string } | null } | null;
+}
+
+export async function buscarExerciciosDoTemplate(
+  templateId: string
+): Promise<ItemTemplateParaCopia[]> {
+  const supabase = criarSupabaseClient();
+  const { data, error } = await supabase
+    .from("treino_template_exercicios")
+    .select(
+      "exercicio_id, series, repeticoes, intervalo_segundos, ordem, encadeado_com_proximo, exercicios ( nome, categorias_exercicio ( nome ) )"
+    )
+    .eq("template_id", templateId)
+    .order("ordem", { ascending: true });
+
+  if (error) {
+    throw new Error(`Falha ao carregar exercícios do treino: ${error.message}`);
+  }
+
+  return (data ?? []) as unknown as ItemTemplateParaCopia[];
+}
+
 export async function iniciarAtribuicao(
   atribuicaoId: string,
   userId: string
@@ -262,15 +303,7 @@ export async function iniciarAtribuicao(
     throw new Error(`Falha ao buscar treino atribuído: ${erroAtribuicao.message}`);
   }
 
-  const { data: itensTemplate, error: erroItens } = await supabase
-    .from("treino_template_exercicios")
-    .select("exercicio_id, series, repeticoes, intervalo_segundos, ordem")
-    .eq("template_id", atribuicao.template_id)
-    .order("ordem", { ascending: true });
-
-  if (erroItens) {
-    throw new Error(`Falha ao carregar exercícios do treino: ${erroItens.message}`);
-  }
+  const itensTemplate = await buscarExerciciosDoTemplate(atribuicao.template_id);
 
   const agora = new Date().toISOString();
 
@@ -292,7 +325,7 @@ export async function iniciarAtribuicao(
   const execucaoId = execucaoCriada.id as string;
   const ultimosPesos = await buscarUltimosPesosPorExercicio(atribuicao.template_id, userId);
 
-  for (const item of itensTemplate ?? []) {
+  for (const item of itensTemplate) {
     const { data: execucaoExercicioCriado, error: erroExecucaoExercicio } = await supabase
       .from("treino_execucao_exercicios")
       .insert({
@@ -300,6 +333,7 @@ export async function iniciarAtribuicao(
         exercicio_id: item.exercicio_id,
         intervalo_segundos: item.intervalo_segundos,
         ordem: item.ordem,
+        encadeado_com_proximo: item.encadeado_com_proximo,
       })
       .select("id")
       .single();
@@ -331,34 +365,40 @@ export async function iniciarAtribuicao(
 }
 
 export async function concluirAtribuicao(
-  atribuicaoId: string,
+  atribuicaoId: string | null,
   execucaoId: string,
   userId: string
 ): Promise<void> {
   const supabase = criarSupabaseClient();
   const agora = new Date().toISOString();
 
-  const { data: atribuicao, error: erroAtribuicao } = await supabase
-    .from("treino_atribuicoes")
-    .select("iniciado_em")
-    .eq("id", atribuicaoId)
-    .single();
+  await apagarExerciciosNaoConcluidos(execucaoId);
 
-  if (erroAtribuicao) {
-    throw new Error(`Falha ao concluir treino: ${erroAtribuicao.message}`);
-  }
+  let duracaoSegundos: number | null = null;
 
-  const duracaoSegundos = atribuicao.iniciado_em
-    ? Math.max(0, Math.round((Date.parse(agora) - Date.parse(atribuicao.iniciado_em)) / 1000))
-    : null;
+  if (atribuicaoId) {
+    const { data: atribuicao, error: erroAtribuicao } = await supabase
+      .from("treino_atribuicoes")
+      .select("iniciado_em")
+      .eq("id", atribuicaoId)
+      .single();
 
-  const { error: erroAtualizaAtribuicao } = await supabase
-    .from("treino_atribuicoes")
-    .update({ status: "concluido", concluido_em: agora, duracao_total_segundos: duracaoSegundos })
-    .eq("id", atribuicaoId);
+    if (erroAtribuicao) {
+      throw new Error(`Falha ao concluir treino: ${erroAtribuicao.message}`);
+    }
 
-  if (erroAtualizaAtribuicao) {
-    throw new Error(`Falha ao concluir treino: ${erroAtualizaAtribuicao.message}`);
+    duracaoSegundos = atribuicao.iniciado_em
+      ? Math.max(0, Math.round((Date.parse(agora) - Date.parse(atribuicao.iniciado_em)) / 1000))
+      : null;
+
+    const { error: erroAtualizaAtribuicao } = await supabase
+      .from("treino_atribuicoes")
+      .update({ status: "concluido", concluido_em: agora, duracao_total_segundos: duracaoSegundos })
+      .eq("id", atribuicaoId);
+
+    if (erroAtualizaAtribuicao) {
+      throw new Error(`Falha ao concluir treino: ${erroAtualizaAtribuicao.message}`);
+    }
   }
 
   const { error: erroAtualizaExecucao } = await supabase
@@ -370,7 +410,40 @@ export async function concluirAtribuicao(
     throw new Error(`Falha ao concluir treino: ${erroAtualizaExecucao.message}`);
   }
 
-  await reiniciarCicloSeCompleto(userId);
+  if (atribuicaoId) {
+    await reiniciarCicloSeCompleto(userId);
+  }
+}
+
+async function apagarExerciciosNaoConcluidos(execucaoId: string): Promise<void> {
+  const supabase = criarSupabaseClient();
+
+  const { data, error: erroBusca } = await supabase
+    .from("treino_execucao_exercicios")
+    .select("id, treino_series ( concluida )")
+    .eq("execucao_id", execucaoId);
+
+  if (erroBusca) {
+    throw new Error(`Falha ao verificar exercícios da execução: ${erroBusca.message}`);
+  }
+
+  const idsNaoConcluidos = (data ?? [])
+    .filter((item) => {
+      const series = (item.treino_series as { concluida: boolean }[]) ?? [];
+      return series.length === 0 || !series.every((serie) => serie.concluida);
+    })
+    .map((item) => item.id as string);
+
+  if (idsNaoConcluidos.length === 0) return;
+
+  const { error: erroExclusao } = await supabase
+    .from("treino_execucao_exercicios")
+    .delete()
+    .in("id", idsNaoConcluidos);
+
+  if (erroExclusao) {
+    throw new Error(`Falha ao limpar exercícios não concluídos: ${erroExclusao.message}`);
+  }
 }
 
 async function reiniciarCicloSeCompleto(userId: string): Promise<void> {
@@ -432,6 +505,84 @@ export async function buscarExecucaoPorId(execucaoId: string): Promise<TreinoExe
   }
 
   return converterParaExecucao(data as unknown as ExecucaoRow);
+}
+
+export interface SerieRetroativa {
+  numeroSerie: number;
+  repeticoes: number;
+  pesoKg: number | null;
+}
+
+export interface ItemRetroativo {
+  exercicioId: string;
+  intervaloSegundos: number;
+  series: SerieRetroativa[];
+}
+
+export async function lancarExecucaoRetroativa(
+  atribuicaoId: string,
+  templateId: string,
+  userId: string,
+  dataIso: string,
+  itens: ItemRetroativo[]
+): Promise<void> {
+  const supabase = criarSupabaseClient();
+  const itensPreenchidos = itens.filter((item) => item.series.length > 0);
+
+  if (itensPreenchidos.length === 0) {
+    throw new Error("Preencha ao menos um exercício para lançar o treino.");
+  }
+
+  const dataHora = `${dataIso}T12:00:00`;
+
+  const { data: execucaoCriada, error: erroExecucao } = await supabase
+    .from("treino_execucoes")
+    .insert({
+      atribuicao_id: atribuicaoId,
+      template_id: templateId,
+      user_id: userId,
+      iniciado_em: dataHora,
+      concluido_em: dataHora,
+    })
+    .select("id")
+    .single();
+
+  if (erroExecucao) {
+    throw new Error(`Falha ao lançar treino: ${erroExecucao.message}`);
+  }
+
+  const execucaoId = execucaoCriada.id as string;
+
+  for (const [indice, item] of itensPreenchidos.entries()) {
+    const { data: execucaoExercicioCriado, error: erroExecucaoExercicio } = await supabase
+      .from("treino_execucao_exercicios")
+      .insert({
+        execucao_id: execucaoId,
+        exercicio_id: item.exercicioId,
+        intervalo_segundos: item.intervaloSegundos,
+        ordem: indice,
+      })
+      .select("id")
+      .single();
+
+    if (erroExecucaoExercicio) {
+      throw new Error(`Falha ao lançar exercícios do treino: ${erroExecucaoExercicio.message}`);
+    }
+
+    const { error: erroSeries } = await supabase.from("treino_series").insert(
+      item.series.map((serie) => ({
+        execucao_exercicio_id: execucaoExercicioCriado.id as string,
+        numero_serie: serie.numeroSerie,
+        repeticoes: serie.repeticoes,
+        peso_kg: serie.pesoKg,
+        concluida: true,
+      }))
+    );
+
+    if (erroSeries) {
+      throw new Error(`Falha ao lançar séries do treino: ${erroSeries.message}`);
+    }
+  }
 }
 
 export async function listarExecucoesConcluidas(userId: string): Promise<TreinoExecucao[]> {

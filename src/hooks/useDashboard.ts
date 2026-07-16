@@ -45,25 +45,42 @@ export function useDashboard() {
   const carregando = carregandoTreinos || carregandoMedidas || carregandoExecucoes;
   const erro = erroTreinos ?? erroMedidas ?? erroExecucoes;
 
+  // Une o diário livre antigo (treinos) com as execuções do fluxo de treino
+  // atribuído (execucoes), pra nenhuma métrica do dashboard ignorar uma delas.
+  const sessoesRealizadas = useMemo(() => {
+    const doDiario = treinos.map((treino) => ({
+      data: treino.data,
+      categorias: treino.exercicios.map((item) => item.categoriaNome),
+    }));
+    const doFluxoAtribuido = execucoes
+      .filter((execucao) => execucao.concluidoEm !== null)
+      .map((execucao) => ({
+        data: execucao.concluidoEm!.slice(0, 10),
+        categorias: execucao.exercicios.map((item) => item.categoriaNome),
+      }));
+    return [...doDiario, ...doFluxoAtribuido];
+  }, [treinos, execucoes]);
+
   const totalTreinosNoMes = useMemo(() => {
     const hoje = new Date();
-    return treinos.filter((treino) => {
-      const data = new Date(`${treino.data}T00:00:00`);
+    return sessoesRealizadas.filter((sessao) => {
+      const data = new Date(`${sessao.data}T00:00:00`);
       return data.getFullYear() === hoje.getFullYear() && data.getMonth() === hoje.getMonth();
     }).length;
-  }, [treinos]);
+  }, [sessoesRealizadas]);
 
   const pesoAtual = medidas[0]?.pesoKg ?? null;
   const pesoInicial = medidas[medidas.length - 1]?.pesoKg ?? null;
 
   const diasDesdeUltimoTreino = useMemo(() => {
-    if (treinos.length === 0) return null;
-    return diasDesde(treinos[0].data);
-  }, [treinos]);
+    if (sessoesRealizadas.length === 0) return null;
+    const dataMaisRecente = [...sessoesRealizadas].sort((a, b) => b.data.localeCompare(a.data))[0];
+    return diasDesde(dataMaisRecente.data);
+  }, [sessoesRealizadas]);
 
   const totalExerciciosRealizados = useMemo(
-    () => treinos.reduce((total, treino) => total + treino.exercicios.length, 0),
-    [treinos]
+    () => sessoesRealizadas.reduce((total, sessao) => total + sessao.categorias.length, 0),
+    [sessoesRealizadas]
   );
 
   const evolucaoPeso: PontoEvolucaoPeso[] = useMemo(
@@ -124,18 +141,15 @@ export function useDashboard() {
 
   const distribuicaoPorCategoria: PontoDistribuicaoCategoria[] = useMemo(() => {
     const contagemPorCategoria = new Map<string, number>();
-    treinos.forEach((treino) => {
-      treino.exercicios.forEach((item) => {
-        contagemPorCategoria.set(
-          item.categoriaNome,
-          (contagemPorCategoria.get(item.categoriaNome) ?? 0) + 1
-        );
+    sessoesRealizadas.forEach((sessao) => {
+      sessao.categorias.forEach((categoriaNome) => {
+        contagemPorCategoria.set(categoriaNome, (contagemPorCategoria.get(categoriaNome) ?? 0) + 1);
       });
     });
     return Array.from(contagemPorCategoria.entries())
       .sort(([, a], [, b]) => b - a)
       .map(([categoria, quantidade]) => ({ categoria, quantidade }));
-  }, [treinos]);
+  }, [sessoesRealizadas]);
 
   return {
     carregando,

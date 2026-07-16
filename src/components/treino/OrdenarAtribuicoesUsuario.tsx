@@ -6,6 +6,7 @@ import { Cartao } from "@/components/ui/Cartao";
 import { Selecao } from "@/components/ui/Selecao";
 import { MensagemErro } from "@/components/ui/MensagemErro";
 import { Carregando } from "@/components/ui/Carregando";
+import { DialogoConfirmacao } from "@/components/ui/DialogoConfirmacao";
 
 export function OrdenarAtribuicoesUsuario({
   usuarios,
@@ -13,7 +14,10 @@ export function OrdenarAtribuicoesUsuario({
   usuarios: { id: string; nome: string | null }[];
 }) {
   const [userId, setUserId] = useState("");
-  const { atribuicoes, carregando, erro, mover } = useOrdenarAtribuicoes(userId || null);
+  const { atribuicoes, carregando, erro, mover, remover } = useOrdenarAtribuicoes(userId || null);
+  const [atribuicaoRemovendoId, setAtribuicaoRemovendoId] = useState<string | null>(null);
+
+  const atribuicaoRemovendo = atribuicoes.find((item) => item.id === atribuicaoRemovendoId);
 
   return (
     <div className="flex flex-col gap-3">
@@ -61,11 +65,28 @@ export function OrdenarAtribuicoesUsuario({
                 >
                   ↓
                 </button>
+                <button
+                  onClick={() => setAtribuicaoRemovendoId(atribuicao.id)}
+                  className="rounded-lg border border-red-900 px-2 py-1 text-xs text-red-400 hover:bg-red-950/40"
+                >
+                  Remover
+                </button>
               </div>
             </Cartao>
           ))}
         </div>
       )}
+
+      <DialogoConfirmacao
+        aberto={atribuicaoRemovendo !== undefined}
+        titulo="Remover treino atribuído"
+        mensagem={`Tem certeza que deseja remover "${atribuicaoRemovendo?.templateNome}" desse usuário? O histórico de treinos já feitos é mantido, mas ele deixa de ter esse treino no ciclo atual.`}
+        aoCancelar={() => setAtribuicaoRemovendoId(null)}
+        aoConfirmar={async () => {
+          if (atribuicaoRemovendoId) await remover(atribuicaoRemovendoId);
+          setAtribuicaoRemovendoId(null);
+        }}
+      />
     </div>
   );
 }

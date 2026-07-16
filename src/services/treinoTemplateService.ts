@@ -9,6 +9,7 @@ interface TemplateExercicioRow {
   repeticoes: number;
   intervalo_segundos: number;
   ordem: number;
+  encadeado_com_proximo: boolean;
   exercicios: {
     nome: string;
     categorias_exercicio: { nome: string } | null;
@@ -40,6 +41,7 @@ const SELECT_TEMPLATE_COMPLETO = `
     repeticoes,
     intervalo_segundos,
     ordem,
+    encadeado_com_proximo,
     exercicios ( nome, categorias_exercicio ( nome ) )
   )
 `;
@@ -55,6 +57,7 @@ function converterParaItem(linha: TemplateExercicioRow): TreinoTemplateExercicio
     repeticoes: linha.repeticoes,
     intervaloSegundos: linha.intervalo_segundos,
     ordem: linha.ordem,
+    encadeadoComProximo: linha.encadeado_com_proximo,
   };
 }
 
@@ -119,6 +122,7 @@ export async function criarTemplate(
         repeticoes: item.repeticoes,
         intervalo_segundos: item.intervaloSegundos,
         ordem: indice,
+        encadeado_com_proximo: item.encadeadoComProximo,
       }))
     );
 
@@ -140,7 +144,7 @@ export async function excluirTemplate(templateId: string): Promise<void> {
   }
 }
 
-async function buscarTemplatePorId(templateId: string): Promise<TreinoTemplate> {
+export async function buscarTemplatePorId(templateId: string): Promise<TreinoTemplate> {
   const supabase = criarSupabaseClient();
   const { data, error } = await supabase
     .from("treino_templates")

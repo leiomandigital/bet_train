@@ -8,6 +8,7 @@ export interface TreinoTemplateExercicio {
   repeticoes: number;
   intervaloSegundos: number;
   ordem: number;
+  encadeadoComProximo: boolean;
 }
 
 export interface TreinoTemplate {
@@ -27,6 +28,7 @@ export interface ItemTemplateRascunho {
   series: number;
   repeticoes: number;
   intervaloSegundos: number;
+  encadeadoComProximo: boolean;
 }
 
 export interface CriarTemplateInput {
