@@ -23,15 +23,19 @@ export interface PontoDistribuicaoCategoria {
   quantidade: number;
 }
 
-export interface ExercicioComHistorico {
-  id: string;
-  nome: string;
-}
-
 export interface PontoEvolucaoPesoExercicio {
   data: string;
   pesoKg: number;
 }
+
+export interface ExercicioEvolucaoPeso {
+  exercicioId: string;
+  exercicioNome: string;
+  pontos: PontoEvolucaoPesoExercicio[];
+}
+
+const DIAS_JANELA_EVOLUCAO_PESO = 90;
+const MAX_EXERCICIOS_POR_CATEGORIA = 8;
 
 export function useDashboard() {
   const { treinos, carregando: carregandoTreinos, erro: erroTreinos } = useTreinos();
@@ -104,40 +108,70 @@ export function useDashboard() {
     [medidas]
   );
 
-  const exerciciosComHistorico: ExercicioComHistorico[] = useMemo(() => {
-    const exerciciosPorId = new Map<string, string>();
-    execucoes.forEach((execucao) => {
-      execucao.exercicios.forEach((item) => {
-        exerciciosPorId.set(item.exercicioId, item.exercicioNome);
-      });
-    });
-    return Array.from(exerciciosPorId.entries())
-      .map(([id, nome]) => ({ id, nome }))
-      .sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [execucoes]);
+  // Só considera os últimos 90 dias — na prática os treinos costumam trocar
+  // nesse ritmo, então dados mais antigos não ajudam a comparar progressão.
+  const limiteDataEvolucaoPeso = useMemo(() => {
+    const limite = new Date();
+    limite.setDate(limite.getDate() - DIAS_JANELA_EVOLUCAO_PESO);
+    return limite.toISOString().slice(0, 10);
+  }, []);
 
-  const evolucaoPesoPorExercicio: Map<string, PontoEvolucaoPesoExercicio[]> = useMemo(() => {
-    const mapa = new Map<string, PontoEvolucaoPesoExercicio[]>();
+  const evolucaoPesoPorCategoria: Map<string, ExercicioEvolucaoPeso[]> = useMemo(() => {
+    interface Acumulado {
+      nome: string;
+      pontos: PontoEvolucaoPesoExercicio[];
+      ultimaData: string;
+    }
+    const porCategoria = new Map<string, Map<string, Acumulado>>();
 
     [...execucoes]
       .sort((a, b) => (a.concluidoEm ?? "").localeCompare(b.concluidoEm ?? ""))
       .forEach((execucao) => {
         if (!execucao.concluidoEm) return;
+        const dataExecucao = execucao.concluidoEm.slice(0, 10);
+        if (dataExecucao < limiteDataEvolucaoPeso) return;
+
         execucao.exercicios.forEach((item) => {
           const pesosDaSessao = item.series
             .map((serie) => serie.pesoKg)
             .filter((peso): peso is number => peso !== null);
           if (pesosDaSessao.length === 0) return;
-
           const pesoMaximo = Math.max(...pesosDaSessao);
-          const pontos = mapa.get(item.exercicioId) ?? [];
-          pontos.push({ data: execucao.concluidoEm!.slice(0, 10), pesoKg: pesoMaximo });
-          mapa.set(item.exercicioId, pontos);
+
+          const exerciciosDaCategoria = porCategoria.get(item.categoriaNome) ?? new Map();
+          const acumulado = exerciciosDaCategoria.get(item.exercicioId) ?? {
+            nome: item.exercicioNome,
+            pontos: [],
+            ultimaData: dataExecucao,
+          };
+          acumulado.pontos.push({ data: dataExecucao, pesoKg: pesoMaximo });
+          acumulado.ultimaData = dataExecucao;
+          exerciciosDaCategoria.set(item.exercicioId, acumulado);
+          porCategoria.set(item.categoriaNome, exerciciosDaCategoria);
         });
       });
 
-    return mapa;
-  }, [execucoes]);
+    const resultado = new Map<string, ExercicioEvolucaoPeso[]>();
+    porCategoria.forEach((exerciciosDaCategoria, categoria) => {
+      const lista = Array.from(exerciciosDaCategoria.entries())
+        .map(([exercicioId, acumulado]) => ({
+          exercicioId,
+          exercicioNome: acumulado.nome,
+          pontos: acumulado.pontos,
+          ultimaData: acumulado.ultimaData,
+        }))
+        .sort((a, b) => b.ultimaData.localeCompare(a.ultimaData))
+        .slice(0, MAX_EXERCICIOS_POR_CATEGORIA)
+        .map(({ exercicioId, exercicioNome, pontos }) => ({ exercicioId, exercicioNome, pontos }));
+      resultado.set(categoria, lista);
+    });
+    return resultado;
+  }, [execucoes, limiteDataEvolucaoPeso]);
+
+  const categoriasComHistoricoPeso = useMemo(
+    () => Array.from(evolucaoPesoPorCategoria.keys()).sort((a, b) => a.localeCompare(b)),
+    [evolucaoPesoPorCategoria]
+  );
 
   const distribuicaoPorCategoria: PontoDistribuicaoCategoria[] = useMemo(() => {
     const contagemPorCategoria = new Map<string, number>();
@@ -161,8 +195,8 @@ export function useDashboard() {
     totalExerciciosRealizados,
     evolucaoPeso,
     evolucaoMedidas,
-    exerciciosComHistorico,
-    evolucaoPesoPorExercicio,
+    categoriasComHistoricoPeso,
+    evolucaoPesoPorCategoria,
     distribuicaoPorCategoria,
   };
 }

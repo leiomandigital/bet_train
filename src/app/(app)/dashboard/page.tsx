@@ -7,7 +7,7 @@ import { Cartao } from "@/components/ui/Cartao";
 import { CartaoMetrica } from "@/components/dashboard/CartaoMetrica";
 import { GraficoEvolucaoPeso } from "@/components/dashboard/GraficoEvolucaoPeso";
 import { GraficoEvolucaoMedidas } from "@/components/dashboard/GraficoEvolucaoMedidas";
-import { GraficoEvolucaoPesoExercicio } from "@/components/dashboard/GraficoEvolucaoPesoExercicio";
+import { GraficoEvolucaoPesoPorCategoria } from "@/components/dashboard/GraficoEvolucaoPesoPorCategoria";
 import { GraficoDistribuicaoCategorias } from "@/components/dashboard/GraficoDistribuicaoCategorias";
 import { formatarPeso } from "@/utils/formatters";
 
@@ -22,8 +22,8 @@ export default function PaginaDashboard() {
     totalExerciciosRealizados,
     evolucaoPeso,
     evolucaoMedidas,
-    exerciciosComHistorico,
-    evolucaoPesoPorExercicio,
+    categoriasComHistoricoPeso,
+    evolucaoPesoPorCategoria,
     distribuicaoPorCategoria,
   } = useDashboard();
 
@@ -58,10 +58,13 @@ export default function PaginaDashboard() {
       </div>
 
       <Cartao>
-        <h2 className="mb-2 text-sm font-semibold text-zinc-200">Evolução de peso por exercício</h2>
-        <GraficoEvolucaoPesoExercicio
-          exercicios={exerciciosComHistorico}
-          evolucaoPorExercicio={evolucaoPesoPorExercicio}
+        <h2 className="mb-2 text-sm font-semibold text-zinc-200">
+          Evolução de peso por categoria
+          <span className="ml-1 font-normal text-zinc-500">(últimos 90 dias)</span>
+        </h2>
+        <GraficoEvolucaoPesoPorCategoria
+          categorias={categoriasComHistoricoPeso}
+          evolucaoPorCategoria={evolucaoPesoPorCategoria}
         />
       </Cartao>
 
