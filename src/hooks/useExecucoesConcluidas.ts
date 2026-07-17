@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
-import { listarExecucoesConcluidas } from "@/services/treinoAtribuicaoService";
+import { excluirExecucao, listarExecucoesConcluidas } from "@/services/treinoAtribuicaoService";
 import type { TreinoExecucao } from "@/types/treinoExecucao.types";
 
 export function useExecucoesConcluidas() {
@@ -30,5 +30,20 @@ export function useExecucoesConcluidas() {
     carregarExecucoes();
   }, [carregarExecucoes]);
 
-  return { execucoes, carregando, erro };
+  const remover = useCallback(
+    async (execucaoId: string): Promise<boolean> => {
+      setErro(null);
+      try {
+        await excluirExecucao(execucaoId);
+        await carregarExecucoes();
+        return true;
+      } catch (excecao) {
+        setErro(excecao instanceof Error ? excecao.message : "Falha ao excluir treino.");
+        return false;
+      }
+    },
+    [carregarExecucoes]
+  );
+
+  return { execucoes, carregando, erro, remover };
 }

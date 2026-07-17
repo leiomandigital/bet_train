@@ -24,6 +24,7 @@ export default function PaginaHistorico() {
     execucoes,
     carregando: carregandoExecucoes,
     erro: erroExecucoes,
+    remover: removerExecucao,
   } = useExecucoesConcluidas();
   const {
     medidas,
@@ -36,6 +37,7 @@ export default function PaginaHistorico() {
   const [aba, setAba] = useState<Aba>("treinos");
   const [treinoEditandoId, setTreinoEditandoId] = useState<string | null>(null);
   const [treinoExcluindoId, setTreinoExcluindoId] = useState<string | null>(null);
+  const [execucaoExcluindoId, setExecucaoExcluindoId] = useState<string | null>(null);
   const [medidaEditandoId, setMedidaEditandoId] = useState<string | null>(null);
   const [medidaExcluindoId, setMedidaExcluindoId] = useState<string | null>(null);
 
@@ -70,7 +72,11 @@ export default function PaginaHistorico() {
             <Carregando />
           ) : (
             execucoes.map((execucao) => (
-              <CartaoExecucaoConcluida key={execucao.id} execucao={execucao} />
+              <CartaoExecucaoConcluida
+                key={execucao.id}
+                execucao={execucao}
+                aoExcluir={() => setExecucaoExcluindoId(execucao.id)}
+              />
             ))
           )}
 
@@ -148,6 +154,17 @@ export default function PaginaHistorico() {
         aoConfirmar={async () => {
           if (treinoExcluindoId) await removerTreino(treinoExcluindoId);
           setTreinoExcluindoId(null);
+        }}
+      />
+
+      <DialogoConfirmacao
+        aberto={execucaoExcluindoId !== null}
+        titulo="Excluir treino"
+        mensagem="Tem certeza que deseja excluir este treino do histórico? Essa ação não pode ser desfeita."
+        aoCancelar={() => setExecucaoExcluindoId(null)}
+        aoConfirmar={async () => {
+          if (execucaoExcluindoId) await removerExecucao(execucaoExcluindoId);
+          setExecucaoExcluindoId(null);
         }}
       />
 

@@ -585,6 +585,15 @@ export async function lancarExecucaoRetroativa(
   }
 }
 
+export async function excluirExecucao(execucaoId: string): Promise<void> {
+  const supabase = criarSupabaseClient();
+  const { error } = await supabase.from("treino_execucoes").delete().eq("id", execucaoId);
+
+  if (error) {
+    throw new Error(`Falha ao excluir treino do histórico: ${error.message}`);
+  }
+}
+
 export async function listarExecucoesConcluidas(userId: string): Promise<TreinoExecucao[]> {
   const supabase = criarSupabaseClient();
   const { data, error } = await supabase
