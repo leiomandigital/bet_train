@@ -22,7 +22,7 @@ export interface TreinoExecucaoExercicio {
 export interface TreinoExecucao {
   id: string;
   atribuicaoId: string | null;
-  templateId: string;
+  templateId: string | null;
   templateNome: string;
   userId: string;
   iniciadoEm: string;

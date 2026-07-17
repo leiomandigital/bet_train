@@ -22,7 +22,6 @@ export interface ExercicioParaLancamento {
 export function useLancamentoRetroativo() {
   const { usuario } = useAuth();
   const [atribuicoes, setAtribuicoes] = useState<TreinoAtribuicao[]>([]);
-  const [exerciciosDoTemplate, setExerciciosDoTemplate] = useState<ExercicioParaLancamento[]>([]);
   const [carregandoAtribuicoes, setCarregandoAtribuicoes] = useState(true);
   const [carregandoExercicios, setCarregandoExercicios] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -39,38 +38,41 @@ export function useLancamentoRetroativo() {
       .finally(() => setCarregandoAtribuicoes(false));
   }, [usuario]);
 
-  const carregarExercicios = useCallback(async (atribuicao: TreinoAtribuicao) => {
-    setCarregandoExercicios(true);
-    setErro(null);
-    try {
-      const itensTemplate = await buscarExerciciosDoTemplate(atribuicao.templateId);
-      setExerciciosDoTemplate(
-        itensTemplate.map((item) => ({
+  const carregarExerciciosDoTemplate = useCallback(
+    async (templateId: string): Promise<ExercicioParaLancamento[]> => {
+      setCarregandoExercicios(true);
+      setErro(null);
+      try {
+        const itensTemplate = await buscarExerciciosDoTemplate(templateId);
+        return itensTemplate.map((item) => ({
           exercicioId: item.exercicio_id,
           exercicioNome: item.exercicios?.nome ?? "Exercício removido",
           categoriaNome: item.exercicios?.categorias_exercicio?.nome ?? "-",
           series: item.series,
           repeticoes: item.repeticoes,
           intervaloSegundos: item.intervalo_segundos,
-        }))
-      );
-    } catch (excecao) {
-      setErro(excecao instanceof Error ? excecao.message : "Falha ao carregar exercícios do treino.");
-    } finally {
-      setCarregandoExercicios(false);
-    }
-  }, []);
+        }));
+      } catch (excecao) {
+        setErro(excecao instanceof Error ? excecao.message : "Falha ao carregar exercícios do treino.");
+        return [];
+      } finally {
+        setCarregandoExercicios(false);
+      }
+    },
+    []
+  );
 
   const salvar = useCallback(
     async (
-      atribuicao: TreinoAtribuicao,
+      atribuicaoId: string | null,
+      templateId: string | null,
       dataIso: string,
       itens: ItemRetroativo[]
     ): Promise<boolean> => {
       if (!usuario) return false;
       setErro(null);
       try {
-        await lancarExecucaoRetroativa(atribuicao.id, atribuicao.templateId, usuario.id, dataIso, itens);
+        await lancarExecucaoRetroativa(atribuicaoId, templateId, usuario.id, dataIso, itens);
         return true;
       } catch (excecao) {
         setErro(excecao instanceof Error ? excecao.message : "Falha ao lançar treino.");
@@ -82,11 +84,10 @@ export function useLancamentoRetroativo() {
 
   return {
     atribuicoes,
-    exerciciosDoTemplate,
     carregandoAtribuicoes,
     carregandoExercicios,
     erro,
-    carregarExercicios,
+    carregarExerciciosDoTemplate,
     salvar,
   };
 }

@@ -122,7 +122,7 @@ interface ExecucaoExercicioRow {
 interface ExecucaoRow {
   id: string;
   atribuicao_id: string | null;
-  template_id: string;
+  template_id: string | null;
   user_id: string;
   iniciado_em: string;
   concluido_em: string | null;
@@ -184,7 +184,8 @@ function converterParaExecucao(linha: ExecucaoRow): TreinoExecucao {
     id: linha.id,
     atribuicaoId: linha.atribuicao_id,
     templateId: linha.template_id,
-    templateNome: linha.treino_templates?.nome ?? "Treino removido",
+    templateNome:
+      linha.treino_templates?.nome ?? (linha.template_id ? "Treino removido" : "Treino personalizado"),
     userId: linha.user_id,
     iniciadoEm: linha.iniciado_em,
     concluidoEm: linha.concluido_em,
@@ -520,8 +521,8 @@ export interface ItemRetroativo {
 }
 
 export async function lancarExecucaoRetroativa(
-  atribuicaoId: string,
-  templateId: string,
+  atribuicaoId: string | null,
+  templateId: string | null,
   userId: string,
   dataIso: string,
   itens: ItemRetroativo[]
